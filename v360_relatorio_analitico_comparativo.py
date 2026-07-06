@@ -78,7 +78,7 @@ COL_ID = "Id"
 
 @st.cache_data(show_spinner=False)
 def carregar_planilha(arquivo) -> pd.DataFrame:
-    df = pd.read_excel(arquivo)
+    df = pd.read_excel(arquivo, engine="openpyxl")
     df.columns = [str(c).strip() for c in df.columns]
 
     for col in [COL_DATA_CADASTRO, COL_DATA_CUMPRIDO]:
@@ -163,6 +163,12 @@ try:
 
 except Exception as e:
     st.error(f"Erro ao carregar os arquivos da pasta dados: {e}")
+    st.info("Confira se os arquivos foram enviados como Excel verdadeiro (.xlsx), e não apenas renomeados. Também confirme se o requirements.txt possui openpyxl.")
+    st.write("Arquivos encontrados:")
+    try:
+        st.code(f"{ARQUIVO_CADASTRO.name} - {ARQUIVO_CADASTRO.stat().st_size:,} bytes\n{ARQUIVO_CUMPRIDO.name} - {ARQUIVO_CUMPRIDO.stat().st_size:,} bytes")
+    except Exception:
+        pass
     st.stop()
 
 df_base = pd.concat([df_cadastro, df_cumprido], ignore_index=True)
