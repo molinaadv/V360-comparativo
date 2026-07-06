@@ -129,53 +129,54 @@ def formatar_delta(v):
     return f"{sinal}{v:.1f}%"
 
 # =========================
-# ENTRADA DE DADOS
+# BASE DE DADOS AUTOMÁTICA
 # =========================
+BASE_DIR = Path(__file__).parent
+PASTA_DADOS = BASE_DIR / "dados"
+
+ARQUIVO_CADASTRO = PASTA_DADOS / "DATA CADASTRO.xlsx"
+ARQUIVO_CUMPRIDO = PASTA_DADOS / "DATA CUMPRIDO.xlsx"
+
 st.markdown("### 📁 Base de dados")
+st.caption("Lendo automaticamente os arquivos da pasta `dados/` no GitHub.")
 
-col_up1, col_up2 = st.columns(2)
-with col_up1:
-    arquivo_cadastro = st.file_uploader("Planilha por Data de Cadastro", type=["xlsx", "xls"], key="cadastro")
-with col_up2:
-    arquivo_cumprido = st.file_uploader("Planilha por Data Cumprido", type=["xlsx", "xls"], key="cumprido")
+arquivos_faltando = []
+if not ARQUIVO_CADASTRO.exists():
+    arquivos_faltando.append(str(ARQUIVO_CADASTRO))
+if not ARQUIVO_CUMPRIDO.exists():
+    arquivos_faltando.append(str(ARQUIVO_CUMPRIDO))
 
-# Tenta carregar arquivos locais se existirem na mesma pasta do app.
-base_local_cadastro = Path("DATA CADASTRO.xlsx")
-base_local_cumprido = Path("DATA CUMPRIDO.xlsx")
-
-frames = []
+if arquivos_faltando:
+    st.error("Não encontrei os arquivos-base na pasta dados.")
+    st.write("Arquivos esperados:")
+    st.code("dados/DATA CADASTRO.xlsx\ndados/DATA CUMPRIDO.xlsx")
+    st.write("Arquivos faltando:")
+    st.code("\n".join(arquivos_faltando))
+    st.stop()
 
 try:
-    if arquivo_cadastro is not None:
-        df_cadastro = carregar_planilha(arquivo_cadastro)
-        df_cadastro["Origem da planilha"] = "Data Cadastro"
-        frames.append(df_cadastro)
-    elif base_local_cadastro.exists():
-        df_cadastro = carregar_planilha(base_local_cadastro)
-        df_cadastro["Origem da planilha"] = "Data Cadastro"
-        frames.append(df_cadastro)
+    df_cadastro = carregar_planilha(ARQUIVO_CADASTRO)
+    df_cadastro["Origem da planilha"] = "Data Cadastro"
 
-    if arquivo_cumprido is not None:
-        df_cumprido = carregar_planilha(arquivo_cumprido)
-        df_cumprido["Origem da planilha"] = "Data Cumprido"
-        frames.append(df_cumprido)
-    elif base_local_cumprido.exists():
-        df_cumprido = carregar_planilha(base_local_cumprido)
-        df_cumprido["Origem da planilha"] = "Data Cumprido"
-        frames.append(df_cumprido)
+    df_cumprido = carregar_planilha(ARQUIVO_CUMPRIDO)
+    df_cumprido["Origem da planilha"] = "Data Cumprido"
+
 except Exception as e:
-    st.error(f"Erro ao carregar planilha: {e}")
+    st.error(f"Erro ao carregar os arquivos da pasta dados: {e}")
     st.stop()
 
-if not frames:
-    st.info("Envie uma ou duas planilhas para iniciar o relatório. Também é possível deixar os arquivos DATA CADASTRO.xlsx e DATA CUMPRIDO.xlsx na mesma pasta do app.")
-    st.stop()
+df_base = pd.concat([df_cadastro, df_cumprido], ignore_index=True)
 
-df_base = pd.concat(frames, ignore_index=True)
 if COL_ID in df_base.columns:
     df_base = df_base.drop_duplicates(subset=[COL_ID], keep="first")
 else:
     df_base = df_base.drop_duplicates()
+
+st.success(
+    f"Base carregada automaticamente: "
+    f"{len(df_cadastro):,} registros de cadastro + "
+    f"{len(df_cumprido):,} registros de cumprido.".replace(",", ".")
+)
 
 # =========================
 # FILTROS
